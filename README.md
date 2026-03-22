@@ -2,7 +2,7 @@
 
 **A purpose-built, governed AI ingress service with durable write-behind memory synchronization.**
 
-[![Status](https://img.shields.io/badge/status-pre--build-blue)]()
+[![Status](https://img.shields.io/badge/status-Phase%201%20complete-brightgreen)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)]()
 [![Author](https://img.shields.io/badge/author-Jonathan%20Openshaw-informational)]()
 
@@ -118,9 +118,30 @@ Related projects:
 
 ## Status
 
-**Pre-build.** PRD and ADRs complete. Pydantic models and DDL in progress. No production code written yet — by design.
+**Phase 1 complete** — commit `e651db3`, March 21, 2026.
 
-Documentation-first. Engineering discipline applied before the first line of implementation code.
+LENS hooks, canonical contracts, and governance constants are implemented, tested, and live. 14/14 tests passing on Python 3.14.2. Phase 2 in progress: full Pydantic models, Postgres DDL, provider adapters, eight-stage governance pipeline, CRUD layer, outbox, and embedding worker.
+
+---
+
+## How It's Built
+
+AegisRelay is built documentation-first under a structured multi-AI review process. No implementation code is written until the design is ratified.
+
+Before a single line of Phase 1 implementation code was written, the plan went through three architectural review passes — Claude as validator, Cursor as spec-consistency reviewer — surfacing 16 distinct issues across four handoff versions. Two product decisions were escalated to the architect: pre-call persistence timing (two-transaction policy, audit integrity is core) and confidence field semantics. Both resolved before build began.
+
+Cursor then implemented Phase 1 directly from the ratified repo docs. Beyond the spec, Cursor introduced three independent improvements: a `NormalizedProviderResponse` type that resolves an ADR-003/ADR-009 contract boundary, `matched_signals` on `LensObservation` for audit traceability, and cascade detection on Decision Checkpoints. All three were adopted.
+
+Result: zero post-build rework. 14/14 tests passing on first commit. No contradictions baked into the codebase.
+
+**This is what governed AI execution looks like in practice** — not a framework document, but a working system built by a directed multi-AI team with a verifiable audit trail.
+
+AI team roles:
+- **Claude** — project lead, architectural review, documentation, handoff production
+- **Cursor** — software architect, spec-consistency review, implementation owner
+- **Gee (ChatGPT)** — LENS design and pressure testing
+- **Lexi (Perplexity)** — PRD and ADR design sessions
+- **Copi (Copilot)** — LENS design sessions
 
 ---
 
