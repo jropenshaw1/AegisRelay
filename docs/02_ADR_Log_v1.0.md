@@ -403,3 +403,134 @@ Rejected. Generic update endpoints with no constraint awareness are equivalent t
 - The `governance_events` table grows with every maintenance operation — this is correct and expected; the audit trail is the integrity guarantee
 - No maintenance operation ever requires direct DB access — if something cannot be done through the CRUD layer, the CRUD layer needs a new operation, not a bypass
 - Future Admin API (v1.5) is a thin HTTP wrapper over `crud_service.py` — no new business logic at the API layer
+
+---
+
+## ADR-009: LENS Constraint Integration
+
+**Date:** March 22, 2026
+**Status:** Accepted
+**Decided by:** Jonathan Openshaw
+**Related:** LENS ADR-009 (mirror decision from LENS perspective)
+
+### Context
+
+ADR-004 established that TSH-9 and LENS are implemented as an eight-stage executable
+governance pipeline. It named both standards and defined the pipeline stages. What it did
+not define was the precise mapping between LENS's six behaviors and those pipeline stages —
+or where in the call flow LENS constraint evaluation sits relative to provider invocation.
+
+This ADR closes that gap. It defines the integration architecture: where LENS hooks into
+AegisRelay's call flow, which behaviors map to which pipeline stages, and what the
+enforcement boundary looks like at v1.
+
+### The Gap in ADR-004
+
+ADR-004 describes an eight-stage pipeline that operates on the provider *response* — they
+are post-call transforms. This is correct for memory governance. But three of LENS's six
+behaviors are pre-call or structural — they must fire before or during execution, not after.
+ADR-004 did not account for this distinction.
+
+The integration therefore requires two additions to the call flow:
+1. A **pre-call evaluation hook** that runs before the provider adapter is invoked
+2. A **post-call evaluation hook** that runs after the response is received but before
+   the eight-stage pipeline begins
+
+The eight pipeline stages themselves are unchanged.
+
+### Decision
+
+LENS constraint evaluation is integrated into AegisRelay via two hooks that bracket the
+provider call. The eight existing pipeline stages are not modified.
+
+**Complete call flow with LENS hooks:**
+
+```
+CanonicalRelayRequest in
+        │
+        ▼
+┌─────────────────────┐
+│  PRE-CALL HOOK      │  ← LENS: Decision Checkpoints + Assumption Surfacing
+│  (lens_pre_call.py) │     Evaluates the request before provider is invoked
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Provider Adapters  │  ← Provider-specific translation (unchanged)
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  POST-CALL HOOK     │  ← LENS: Prompt Reflection + Reframe Offers
+│  (lens_post_call.py)│     Evaluates the exchange after response received
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Governance         │  ← Eight-stage pipeline (ADR-004) — unchanged
+│  Pipeline           │     Stage 3 (Classify): Cognitive Model Disclosure
+│                     │     Stage 4 (Mark Uncertainty): Uncertainty Flagging
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Persistence        │  ← LENS observations written to governance_events
+│  (Stage 8)          │     tagged [source:lens]
+└─────────────────────┘
+```
+
+### LENS Behavior to Pipeline Stage Mapping
+
+| LENS Behavior | Hook / Stage | Rationale |
+|---------------|-------------|----------|
+| Decision Checkpoints | Pre-call hook | Must fire before irreversible action. Evaluates whether the relay request warrants a checkpoint before executing. |
+| Assumption Surfacing | Pre-call hook | Key assumptions in the relay request should be surfaced before the provider call commits to an interpretation. |
+| Prompt Reflection | Post-call hook | Retrospective — evaluates the exchange after the response is received. |
+| Reframe Offers | Post-call hook | Retrospective — evaluates whether the question asked was the question needed. |
+| Uncertainty Flagging | Stage 4 — Mark Uncertainty | Direct mapping. LENS defines the trigger conditions; AegisRelay implements the detection. |
+| Cognitive Model Disclosure | Stage 3 — Classify | Identifying the analytical frame applied to a response is a classification decision. |
+
+### New Module Structure
+
+```
+aegisrelay/
+├── governance/
+│   ├── pipeline.py          # Existing eight-stage pipeline (ADR-004)
+│   ├── lens_pre_call.py     # NEW — Decision Checkpoints + Assumption Surfacing
+│   ├── lens_post_call.py    # NEW — Prompt Reflection + Reframe Offers
+│   └── lens_constants.py    # NEW — LENS behavior IDs, tags, constraint schema
+```
+
+### v1 Enforcement Boundary
+
+**Observational enforcement at v1:** Pre-call and post-call hooks fire, evaluate against
+LENS trigger conditions, and write observations to `governance_events`. No blocking, no
+automatic retry, no automated violation writes. Human operator reviews governance_events.
+
+**v2 path (defined, not yet implemented):**
+- Pre-call hook becomes a blocking gate for Decision Checkpoint events
+- Post-call hook evaluates against the full LENS compliance rubric (Functional Spec S7.2)
+  and writes LENS-correction thoughts automatically tagged `[source:automated]`
+
+### What Does Not Change
+
+ADR-001 through ADR-008 are unaffected. The eight pipeline stages are unchanged — Stages 3
+and 4 gain LENS-specific trigger conditions but their structure and sequence are unmodified.
+The canonical contracts gain no new required fields; hook outputs write to governance_events.
+
+### Consequences
+
+- AegisRelay's governance pipeline now fully implements all six LENS behaviors
+- The "LENS as executable governance" claim in ADR-004 is fully specified, not asserted
+- `governance_events` becomes the LENS observation ledger within AegisRelay
+- v1 enforcement is observational — no blocking, no retry, no automated violation writes
+- v2 path is defined for both pre-call blocking and automated violation detection
+- LENS remains a portable protocol — these hooks implement LENS inside AegisRelay;
+  other AI clients implement LENS via canonical reference without requiring AegisRelay
+- Full integration specification in `docs/03_Integration_Design_v1.0.md`
+
+---
+
+*AegisRelay ADR Log v1.0 — All ADRs accepted*
+*ADR-009 added March 22, 2026*
+*Next step: Implementation per 03_Integration_Design_v1.0.md*
