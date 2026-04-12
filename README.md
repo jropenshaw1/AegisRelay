@@ -2,7 +2,7 @@
 
 **A purpose-built, governed AI ingress service with durable write-behind memory synchronization.**
 
-[![Status](https://img.shields.io/badge/status-Phase%201%20complete-brightgreen)]()
+[![Status](https://img.shields.io/badge/status-Phase%202%20complete-brightgreen)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-green)]()
 [![Author](https://img.shields.io/badge/author-Jonathan%20Openshaw-informational)]()
 
@@ -118,9 +118,9 @@ Related projects:
 
 ## Status
 
-**Phase 1 complete** — commit `e651db3`, March 21, 2026.
+**Phase 2 complete** — extended contracts (ADR-003), Postgres/SQLite DDL (ADR-002), `DatabaseProvider` + `CrudService`, eight-stage governance pipeline with Stage 3/4 LENS hooks (ADR-004), stub and Perplexity adapters, transactional outbox, embedding and OpenBrain sync worker stubs, and `relay_service.execute_relay()` orchestration. Phase 1 LENS pre/post hooks remain covered; test suite is 42+ tests on current Python.
 
-LENS hooks, canonical contracts, and governance constants are implemented, tested, and live. 14/14 tests passing on Python 3.14.2. Phase 2 in progress: full Pydantic models, Postgres DDL, provider adapters, eight-stage governance pipeline, CRUD layer, outbox, and embedding worker.
+Phase 1 baseline: commit `e651db3`, March 21, 2026 (LENS hooks, canonical contracts, governance constants).
 
 ---
 

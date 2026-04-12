@@ -51,6 +51,8 @@ def evaluate_pre_call(request: CanonicalRelayRequest) -> list[LensObservation]:
         dc_signals.append(C.SIGNAL_IRREVERSIBLE)
     if _CASCADE_PATTERN.search(text):
         dc_signals.append(C.SIGNAL_CASCADE)
+    if request.has_downstream_effects is True:
+        dc_signals.append(C.SIGNAL_EXPLICIT_DOWNSTREAM)
 
     if dc_signals:
         out.append(

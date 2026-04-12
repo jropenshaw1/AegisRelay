@@ -107,6 +107,18 @@ def test_evaluate_pre_call_fires_decision_checkpoint_on_cascade_language() -> No
     assert any("cascade" in s for s in dc.matched_signals)
 
 
+def test_evaluate_pre_call_fires_on_explicit_has_downstream_effects() -> None:
+    req = CanonicalRelayRequest(
+        input_text="Apply a small configuration tweak.",
+        operation="read",
+        has_downstream_effects=True,
+    )
+    obs = evaluate_pre_call(req)
+    assert any(o.behavior == "decision_checkpoints" for o in obs)
+    dc = next(o for o in obs if o.behavior == "decision_checkpoints")
+    assert "explicit:has_downstream_effects" in dc.matched_signals
+
+
 def test_evaluate_post_call_returns_empty_for_plain_completion() -> None:
     req = CanonicalRelayRequest(input_text="2+2?", operation="read")
     resp = NormalizedProviderResponse(body_text="4")

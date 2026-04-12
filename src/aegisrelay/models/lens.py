@@ -11,6 +11,8 @@ LensBehaviorId = Literal[
     "assumption_surfacing",
     "prompt_reflection",
     "reframe_offers",
+    "cognitive_model_disclosure",
+    "uncertainty_flagging",
 ]
 
 LensHookId = Literal["pre_call", "post_call"]
