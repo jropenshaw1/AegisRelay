@@ -52,17 +52,17 @@ def _dt_to_str(dt: datetime) -> str:
     return dt.isoformat()
 
 
-def _parse_dt(value: str | None) -> datetime | None:
+def _parse_dt(value: str | datetime | None) -> datetime | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value
     s = value.replace("Z", "+00:00") if value.endswith("Z") else value
     return datetime.fromisoformat(s)
 
 
-def _irreversible_sql_val(v: bool | None) -> int | None:
-    if v is None:
-        return None
-    return 1 if v else 0
+def _irreversible_sql_val(v: bool | None) -> bool | None:
+    return v
 
 
 class CrudService:
@@ -182,8 +182,9 @@ class CrudService:
     def _insert_governance_event(self, ge: GovernanceEvent) -> None:
         self._db.execute(
             """
-            INSERT OR IGNORE INTO governance_events (event_id, relay_id, event_type, stage, metadata, created_at)
+            INSERT INTO governance_events (event_id, relay_id, event_type, stage, metadata, created_at)
             VALUES (:event_id, :relay_id, :event_type, :stage, :metadata, :created_at)
+            ON CONFLICT (event_id) DO NOTHING
             """,
             {
                 "event_id": ge.event_id,
@@ -198,13 +199,14 @@ class CrudService:
     def _insert_memory_record(self, mem: MemoryRecord) -> None:
         self._db.execute(
             """
-            INSERT OR IGNORE INTO memory_records (
+            INSERT INTO memory_records (
                 memory_id, relay_id, body_text, content_hash,
                 trust_tier, temporal_scope, expires_at, embedding_status, schema_version
             ) VALUES (
                 :memory_id, :relay_id, :body_text, :content_hash,
                 :trust_tier, :temporal_scope, :expires_at, :embedding_status, :schema_version
             )
+            ON CONFLICT (relay_id, content_hash) DO NOTHING
             """,
             {
                 "memory_id": mem.memory_id,
@@ -242,7 +244,12 @@ class CrudService:
         response: CanonicalRelayResponse | None = None
         if rrow is not None:
             raw = rrow["raw_provider_response"]
-            raw_d: dict[str, Any] | None = json.loads(raw) if raw else None
+            if raw is None:
+                raw_d = None
+            elif isinstance(raw, dict):
+                raw_d = raw
+            else:
+                raw_d = json.loads(raw)
             response = CanonicalRelayResponse(
                 relay_id=rrow["relay_id"],
                 provider_name=rrow["provider_name"],
@@ -351,7 +358,8 @@ class CrudService:
         )
 
     def _row_to_governance(self, row: Any) -> GovernanceEvent:
-        meta = json.loads(row["metadata"])
+        meta_raw = row["metadata"]
+        meta = meta_raw if isinstance(meta_raw, dict) else json.loads(meta_raw)
         return GovernanceEvent(
             event_id=row["event_id"],
             relay_id=row["relay_id"],

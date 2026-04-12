@@ -1,33 +1,51 @@
-"""Postgres provider placeholder — wire asyncpg/psycopg when deploying."""
+"""Postgres `DatabaseProvider` — production; uses psycopg3."""
 
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
-from typing import Any
+import re
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Generator
 
 from aegisrelay.db.base import DatabaseProvider
 
+if TYPE_CHECKING:
+    from aegisrelay.config.secrets import SecretsProvider
 
-class _PostgresTransactionStub(AbstractContextManager[None]):
-    def __enter__(self) -> None:
-        raise NotImplementedError(
-            "PostgresProvider is not implemented in the Phase 2 portfolio build; use SQLiteProvider."
-        )
+_PARAM = re.compile(r":([a-zA-Z_][a-zA-Z0-9_]*)")
 
-    def __exit__(self, *exc: object) -> None:
-        return None
+
+def _pg_sql(sqlite_style: str) -> str:
+    """Map SQLite-style `:name` placeholders to psycopg ``%(name)s``."""
+
+    def repl(m: re.Match[str]) -> str:
+        return f"%({m.group(1)})s"
+
+    return _PARAM.sub(repl, sqlite_style)
 
 
 class PostgresProvider(DatabaseProvider):
-    """Interface stub; portfolio tests use `SQLiteProvider` instead."""
+    """Sync psycopg3 connection; matches ``SQLiteProvider`` execute/transaction semantics."""
 
-    def __init__(self, dsn: str = "") -> None:
-        self._dsn = dsn
+    @classmethod
+    def from_secrets(cls, secrets: SecretsProvider) -> PostgresProvider:
+        """Connect using ``DATABASE_URL`` from a ``SecretsProvider``."""
+        return cls(secrets.get("DATABASE_URL"))
+
+    def __init__(self, dsn: str) -> None:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        self._psycopg = psycopg
+        self._conn = psycopg.connect(dsn, autocommit=True, row_factory=dict_row)
 
     def execute(self, query: str, params: dict[str, Any] | None = None) -> Any:
-        raise NotImplementedError(
-            "PostgresProvider is not implemented in the Phase 2 portfolio build; use SQLiteProvider."
-        )
+        sql = _pg_sql(query)
+        return self._conn.execute(sql, params or {})
 
-    def transaction(self) -> AbstractContextManager[None]:
-        return _PostgresTransactionStub()
+    @contextmanager
+    def transaction(self) -> Generator[None, None, None]:
+        with self._conn.transaction():
+            yield
+
+    def close(self) -> None:
+        self._conn.close()
