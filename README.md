@@ -8,6 +8,12 @@
 
 ---
 
+## Getting Started
+
+For a linear walkthrough — local Python setup, Supabase Edge deploy, API shapes, and environment variables — see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
+
+---
+
 ## What It Is
 
 AegisRelay is the governed entry point for all external AI provider output before it enters shared memory. It routes prompts to AI providers (Perplexity, Grok, Gemini, and others), normalizes responses into a canonical envelope, applies TSH-9 and LENS as executable governance transforms, and persists results with full audit lineage and async embedding enrichment.
