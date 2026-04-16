@@ -124,7 +124,7 @@ Related projects:
 
 ## Status
 
-**Phase 2 complete** — extended contracts (ADR-003), Postgres/SQLite DDL (ADR-002), `DatabaseProvider` + `CrudService`, eight-stage governance pipeline with Stage 3/4 LENS hooks (ADR-004), stub and Perplexity adapters, transactional outbox, embedding and OpenBrain sync worker stubs, and `relay_service.execute_relay()` orchestration. Phase 1 LENS pre/post hooks remain covered; test suite is 42+ tests on current Python.
+**Phase 2 complete** — extended contracts (ADR-003), Postgres/SQLite DDL (ADR-002), `DatabaseProvider` + `CrudService`, eight-stage governance pipeline with Stage 3/4 LENS hooks (ADR-004), stub and Perplexity adapters, transactional outbox, embedding and OpenBrain sync worker stubs, and `relay_service.execute_relay()` orchestration. Phase 1 LENS pre/post hooks remain covered; test suite is 51 passed, 1 skipped (0.20s, current Python).
 
 Phase 1 baseline: commit `e651db3`, March 21, 2026 (LENS hooks, canonical contracts, governance constants).
 
