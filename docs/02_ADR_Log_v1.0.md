@@ -9,18 +9,18 @@
 
 ## ADR Index
 
-| ADR | Title | Status |
-|---|---|---|
-| ADR-001 | Product Boundary | Accepted |
-| ADR-002 | Storage Strategy | Accepted |
-| ADR-003 | Canonical Contracts | Accepted |
-| ADR-004 | Governance Semantics | Accepted |
-| ADR-005 | Idempotency Strategy | Accepted |
-| ADR-006 | Expiry and Supersession | Accepted |
-| ADR-007 | Embedding Lifecycle | Accepted |
-| ADR-008 | Data Maintenance and CRUD Strategy | Accepted |
-| ADR-009 | LENS Constraint Integration | Accepted |
-| ADR-010 | Remove Direct-to-OpenBrain Edge Function | Accepted |
+| ADR | Title | ADR Status | Implementation Status |
+|---|---|---|---|
+| ADR-001 | Product Boundary | Accepted | Implemented |
+| ADR-002 | Storage Strategy | Accepted | Implemented |
+| ADR-003 | Canonical Contracts | Accepted | Implemented |
+| ADR-004 | Governance Semantics | Accepted | Implemented |
+| ADR-005 | Idempotency Strategy | Accepted | Planned |
+| ADR-006 | Expiry and Supersession | Accepted | Planned |
+| ADR-007 | Embedding Lifecycle | Accepted | Implemented |
+| ADR-008 | Data Maintenance and CRUD Strategy | Accepted | Planned |
+| ADR-009 | LENS Constraint Integration | Accepted | Implemented |
+| ADR-010 | Remove Direct-to-OpenBrain Edge Function | Accepted | Implemented |
 
 ---
 
@@ -144,6 +144,8 @@ Idempotency enforced at two levels:
 - `UNIQUE` constraints enforced at DB layer, not just application logic
 - Outbox uses `relay_id` as correlation key for retry without re-invoking provider
 
+**Current implementation note:** Today `relay_id` defaults to a random UUID via `uuid4()` unless the caller provides one. Deterministic relay ID generation is deferred.
+
 ---
 
 ## ADR-006: Expiry and Supersession
@@ -185,6 +187,8 @@ No transitions back to `active` from `expired` or `superseded`. Terminal states 
 - Background job transitions `active` → `expired` based on `expires_at` (state update, not delete)
 - OpenBrain sync only exports `active`, non-expired records
 - Full version chain reconstructible via `parent_memory_id` traversal
+
+**Current implementation note:** `expires_at` exists in schema today, but the richer lifecycle fields (`status`, `parent_memory_id`, `superseded_at`, `is_retrievable`) are deferred.
 
 ---
 

@@ -10,13 +10,13 @@
 
 ## Getting Started
 
-For a linear walkthrough — local Python setup, Supabase Edge deploy, API shapes, and environment variables — see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
+For a linear walkthrough — local Python setup, governed OpenBrain sync context, and environment variables — see **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
 
 ---
 
 ## What It Is
 
-AegisRelay is the governed entry point for all external AI provider output before it enters shared memory. It routes prompts to AI providers (Perplexity, Grok, Gemini, and others), normalizes responses into a canonical envelope, applies TSH-9 and LENS as executable governance transforms, and persists results with full audit lineage and async embedding enrichment.
+AegisRelay is the governed entry point for all external AI provider output before it enters shared memory. It routes prompts to implemented and planned AI providers, normalizes responses into a canonical envelope, applies TSH-9 and LENS as executable governance transforms, and persists results with full audit lineage and async embedding enrichment.
 
 **The relay is a feature. The governed memory plane is the system.**
 
@@ -69,7 +69,7 @@ Human / Claude
        │
        ▼
 ┌─────────────┐
-│ Persistence │  ← Split tables, transactional outbox, three success states
+│ Persistence │  ← Split tables, transactional outbox
 └──────┬──────┘
        │
        ▼
@@ -77,12 +77,6 @@ Human / Claude
 │  Async      │  ← Embedding worker, versioned model
 │  Enrichment │
 └──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Retrieval  │  ← Metadata filters + vector similarity search
-│    API      │
-└─────────────┘
        │
        ▼ (optional, selective)
   OpenBrain
@@ -104,17 +98,24 @@ Human / Claude
 
 ---
 
-## v1 Providers
+## Providers
 
-- **Perplexity** (sonar-pro, sonar) — bespoke adapter
+**Implemented**
+
+- **Perplexity** (`PerplexityAdapter`) — bespoke adapter
+- **Stub** (`StubAdapter`) — deterministic testing and offline demo adapter
+
+**Planned**
+
 - **xAI Grok** (grok-beta) — OpenAI-compatible adapter
-- Additional OpenAI-compatible providers via config — no code change required
+- **Gemini**
+- **OpenAI-compatible providers** (generic)
 
 ---
 
 ## Project Context
 
-AegisRelay is part of a personal AI infrastructure stack built by Jonathan Openshaw — a Director-level technology executive with 28 years of enterprise IT leadership across Avnet Inc. and Choice Hotels International.
+AegisRelay is part of a personal AI infrastructure stack built by Jonathan Openshaw.
 
 Related projects:
 - [PipelinePilot](https://github.com/jropenshaw1/PipelinePilot) — AI-powered job search lifecycle manager
@@ -124,7 +125,11 @@ Related projects:
 
 ## Status
 
-**Phase 2 complete** — extended contracts (ADR-003), Postgres/SQLite DDL (ADR-002), `DatabaseProvider` + `CrudService`, eight-stage governance pipeline with Stage 3/4 LENS hooks (ADR-004), stub and Perplexity adapters, transactional outbox, embedding and OpenBrain sync worker stubs, and `relay_service.execute_relay()` orchestration. Phase 1 LENS pre/post hooks remain covered; test suite is 51 passed, 1 skipped (0.20s, current Python).
+| Area | Status | Notes |
+|---|---|---|
+| Phase 1 | Complete | Relay pipeline, LENS hooks, governance events, async enrichment, and OpenBrain sync path are implemented. |
+| Phase 2 | In Progress | Additional providers and the broader admin module remain in active build-out. |
+| Phase 2 | Planned | Retrieval API, deterministic `relay_id`, and the richer memory lifecycle state machine are not implemented yet. |
 
 Phase 1 baseline: commit `e651db3`, March 21, 2026 (LENS hooks, canonical contracts, governance constants).
 

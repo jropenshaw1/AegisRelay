@@ -148,7 +148,7 @@ For **Part 1 only**, you can skip filling `.env`. The default tests use SQLite i
 pytest tests/
 ```
 
-> **Key step — what "good" looks like:** You should see **51 passed**, **1 skipped**. The skipped test is for **Postgres**; it only runs when `DATABASE_URL` is set. Skipping is normal on a fresh laptop.
+> **Key step — what "good" looks like:** Run `pytest` to verify all tests pass. A Postgres-specific test may be skipped when `DATABASE_URL` is not set.
 
 If you see errors about missing `pytest`, your virtual environment may not be active — go back to Step 2.
 
@@ -211,11 +211,11 @@ Use **`.env.example`** as a starting point on your machine. **Never commit** a f
 | Symptom | What to try |
 |---------|-------------|
 | `pytest` not found | Activate `.venv` again; reinstall with `pip install -e ".[dev]"`. |
-| 51 passed, 1 skipped | Normal without `DATABASE_URL`. |
+| Postgres test skipped | Normal without `DATABASE_URL`. |
 | OpenBrain sync not happening | Confirm outbox rows exist, embeddings complete when required, and your sync credentials are configured for `ob_sync_worker.py`. |
 | 502-style embedding failures | Check your OpenRouter key, credits, or model availability in the worker/runtime logs. |
 | Insert fails | Confirm `thoughts` table exists and that the governed sync path has valid Supabase credentials. |
 
 ---
 
-You're done when Part 1 shows **51 passed, 1 skipped** and the governed OpenBrain sync path is configured for your environment. Everything else is optional depth.
+You're done when Part 1 shows all tests passing and the governed OpenBrain sync path is configured for your environment. Everything else is optional depth.
