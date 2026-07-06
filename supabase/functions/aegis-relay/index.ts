@@ -1,12 +1,15 @@
 /**
  * AegisRelay — ingest relay text into OpenBrain `thoughts` (embedding via OpenRouter).
  *
- * Secrets (Dashboard → Edge Functions → aegis-relay → Secrets):
- *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (auto-injected on hosted runtime)
+ * Secrets (set via `supabase secrets set`):
+ *   SUPABASE_URL          (auto-injected on hosted runtime)
+ *   OB_SUPABASE_SECRET    (opaque sb_secret_* key — shared across all projects)
  *   OPENROUTER_API_KEY
- *   OPENBRAIN_SYNC_TOKEN — must match `Authorization: Bearer …` (same value as Python OB sync)
  *
- * Deploy: `supabase functions deploy aegis-relay`
+ * Auth: callers send `apikey: <OB_SUPABASE_SECRET>` header.
+ * Gateway JWT verification disabled (`--no-verify-jwt`).
+ *
+ * Deploy: `supabase functions deploy aegis-relay --no-verify-jwt --use-api`
  */
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -40,24 +43,29 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/** Reject unless `Authorization: Bearer` matches `OPENBRAIN_SYNC_TOKEN`. */
-function authorizeOpenBrain(req: Request): Response | null {
-  const expected = Deno.env.get("OPENBRAIN_SYNC_TOKEN");
+/** Verify inbound `apikey` header against OB_SUPABASE_SECRET. */
+function verifyApiKey(req: Request): boolean {
+  const apikey = req.headers.get("apikey");
+  const expected = Deno.env.get("OB_SUPABASE_SECRET");
+
   if (!expected) {
-    return jsonResponse(
-      { error: "Server misconfiguration: OPENBRAIN_SYNC_TOKEN not set" },
-      500,
+    throw new Error(
+      "[auth] OB_SUPABASE_SECRET not set. " +
+      'Run: supabase secrets set OB_SUPABASE_SECRET="<sb_secret_key>"',
     );
   }
-  const auth = req.headers.get("Authorization");
-  if (!auth || !auth.toLowerCase().startsWith("bearer ")) {
-    return jsonResponse({ error: "Missing or invalid Authorization header" }, 401);
+
+  if (!apikey) return false;
+
+  // Constant-time comparison
+  if (apikey.length !== expected.length) return false;
+  const a = new TextEncoder().encode(apikey);
+  const b = new TextEncoder().encode(expected);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a[i] ^ b[i];
   }
-  const token = auth.slice(7).trim();
-  if (token !== expected) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
-  }
-  return null;
+  return diff === 0;
 }
 
 async function embedOpenRouter(
@@ -129,8 +137,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const authErr = authorizeOpenBrain(req);
-  if (authErr) return authErr;
+  if (!verifyApiKey(req)) {
+    return jsonResponse(
+      { error: "Missing or invalid apikey header" },
+      401,
+    );
+  }
 
   let body: IngestBody;
   try {
@@ -147,10 +159,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const metadata = mergeMetadata(body.metadata);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceKey) {
+  const obKey = Deno.env.get("OB_SUPABASE_SECRET");
+  if (!supabaseUrl || !obKey) {
     return jsonResponse(
-      { error: "Server misconfiguration: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing" },
+      { error: "Server misconfiguration: SUPABASE_URL or OB_SUPABASE_SECRET missing" },
       500,
     );
   }
@@ -166,8 +178,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  const supabase = createClient(supabaseUrl, serviceKey, {
+  const supabase = createClient(supabaseUrl, obKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      headers: {
+        apikey: obKey,
+      },
+    },
   });
 
   const row: Record<string, unknown> = {
