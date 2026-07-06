@@ -395,6 +395,3 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-# AegisRelay ingress — allow server-to-server calls without a user JWT (use secrets / custom headers).
-[functions.aegis-relay]
-verify_jwt = false

@@ -1,7 +1,9 @@
 .env
+.venv/
 
 __pycache__/
 *.pyc
 *.pyo
 src/*.egg-info/
 .pytest_cache/
+AegisRelay_Repo_Image.jpg

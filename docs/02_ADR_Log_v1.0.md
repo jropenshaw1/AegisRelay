@@ -19,6 +19,8 @@
 | ADR-006 | Expiry and Supersession | Accepted |
 | ADR-007 | Embedding Lifecycle | Accepted |
 | ADR-008 | Data Maintenance and CRUD Strategy | Accepted |
+| ADR-009 | LENS Constraint Integration | Accepted |
+| ADR-010 | Remove Direct-to-OpenBrain Edge Function | Accepted |
 
 ---
 
@@ -534,3 +536,25 @@ The canonical contracts gain no new required fields; hook outputs write to gover
 *AegisRelay ADR Log v1.0 — All ADRs accepted*
 *ADR-009 added March 22, 2026*
 *Next step: Implementation per 03_Integration_Design_v1.0.md*
+
+---
+
+## ADR-010: Remove Direct-to-OpenBrain Edge Function
+
+**Date:** July 6, 2026
+**Status:** Accepted
+**Decider:** Jonathan Openshaw
+
+### Context
+
+A Supabase edge function was deployed as scaffolding to prove OpenBrain connectivity before the relay pipeline existed. Once the relay pipeline went live with `ob_sync_worker.py` as the governed OpenBrain sync path, the edge function became an ungoverned bypass that violated the single write authority invariant established in ADR-002 and reinforced during Phase 2 review.
+
+### Decision
+
+Delete the edge function. All writes to OpenBrain must traverse the relay pipeline via `ob_sync_worker.py`. No direct-to-OpenBrain write paths are permitted.
+
+### Consequences
+
+- `docs/GETTING_STARTED.md` edge function section removed
+- Auth contract mismatch (Bearer token vs `apikey` header) is resolved by deletion rather than correction
+- Scaffolding paths must be decommissioned when the governed path goes live, not left running alongside it
